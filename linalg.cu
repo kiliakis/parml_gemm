@@ -7,7 +7,7 @@ extern cublasHandle_t cublas_handle;
 #endif
 
 // #define TILE_DIM 32
-// #define TILE_N 16 
+// #define TILE_N 16
 // #define TILE_TB_HEIGHT 8
 // #define TILE_M (TILE_N*TILE_TB_HEIGHT)
 
@@ -61,12 +61,12 @@ __global__ void dgemm_tb_naive(const double *A, const double *B, const double *C
 /*
  *  Optimized matrix multiply kernels using shared memory.
  */
-template <int BLOCK_SIZE> __global__ void dgemm_optimized(const double *A, const double *B,
-                                double *C,
-                                const int M, const int N, const int K) {
-    int wA = K;
-    int wB = N;
-
+// A: M x K, B: K x N, C: M x N
+template <int BLOCK_SIZE> __global__ void dgemm_optimized(
+    const double *A, const double *B,
+    double *C,
+    const int M, const int N, const int K)
+{
     // Block index
     int bx = blockIdx.x;
     int by = blockIdx.y;
@@ -76,10 +76,10 @@ template <int BLOCK_SIZE> __global__ void dgemm_optimized(const double *A, const
     int ty = threadIdx.y;
 
     // Index of the first sub-matrix of A processed by the block
-    int aBegin = wA * BLOCK_SIZE * by;
+    int aBegin = K * BLOCK_SIZE * by;
 
     // Index of the last sub-matrix of A processed by the block
-    int aEnd   = aBegin + wA - 1;
+    int aEnd   = aBegin + K - 1;
 
     // Step size used to iterate through the sub-matrices of A
     int aStep  = BLOCK_SIZE;
@@ -88,30 +88,34 @@ template <int BLOCK_SIZE> __global__ void dgemm_optimized(const double *A, const
     int bBegin = BLOCK_SIZE * bx;
 
     // Step size used to iterate through the sub-matrices of B
-    int bStep  = BLOCK_SIZE * wB;
+    int bStep  = BLOCK_SIZE * N;
 
     // Csub is used to store the element of the block sub-matrix
     // that is computed by the thread
     double Csub = 0;
+
+    // Declaration of the shared memory array As used to
+    // store the sub-matrix of A
+    __shared__ double As[BLOCK_SIZE][BLOCK_SIZE];
+
+    // Declaration of the shared memory array Bs used to
+    // store the sub-matrix of B
+    __shared__ double Bs[BLOCK_SIZE][BLOCK_SIZE];
 
     // Loop over all the sub-matrices of A and B
     // required to compute the block sub-matrix
     for (int a = aBegin, b = bBegin;
             a <= aEnd;
             a += aStep, b += bStep) {
-        // Declaration of the shared memory array As used to
-        // store the sub-matrix of A
-        __shared__ double As[BLOCK_SIZE][BLOCK_SIZE];
-
-        // Declaration of the shared memory array Bs used to
-        // store the sub-matrix of B
-        __shared__ double Bs[BLOCK_SIZE][BLOCK_SIZE];
 
         // Load the matrices from device memory
         // to shared memory; each thread loads
         // one element of each matrix
-        As[ty][tx] = A[a + wA * ty + tx];
-        Bs[ty][tx] = B[b + wB * ty + tx];
+        if (a + K * ty + tx < M * K)
+            As[ty][tx] = A[a + K * ty + tx];
+
+        if (b + N * ty + tx < K * N)
+            Bs[ty][tx] = B[b + N * ty + tx];
 
         // Synchronize to make sure the matrices are loaded
         __syncthreads();
@@ -120,7 +124,6 @@ template <int BLOCK_SIZE> __global__ void dgemm_optimized(const double *A, const
         // each thread computes one element
         // of the block sub-matrix
 #pragma unroll
-
         for (int k = 0; k < BLOCK_SIZE; ++k) {
             Csub += As[ty][k] * Bs[k][tx];
         }
@@ -133,8 +136,9 @@ template <int BLOCK_SIZE> __global__ void dgemm_optimized(const double *A, const
 
     // Write the block sub-matrix to device memory;
     // each thread writes one element
-    int c = wB * BLOCK_SIZE * by + BLOCK_SIZE * bx;
-    C[c + wB * ty + tx] = Csub;
+    int c = N * BLOCK_SIZE * by + BLOCK_SIZE * bx;
+    if (c + N * ty + tx < M*N)
+        C[c + N * ty + tx] = Csub;
 }
 
 __global__ void dgemm_ta_optimized(const double *A, const double *B,
@@ -170,7 +174,7 @@ void dgemm_gpu(const double *A, const double *B, double *C, const int M, const i
      *  FILLME: Set up the blocks, grid and the shared memory size.
      */
     dim3 block(BLOCK_SIZE, BLOCK_SIZE);
-    dim3 grid((N + block.x - 1) / block.x, 
+    dim3 grid((N + block.x - 1) / block.x,
               (K + block.y - 1) / block.y);
     size_t shmem_size = 2 * BLOCK_SIZE * BLOCK_SIZE * sizeof(double);
     dgemm_optimized<BLOCK_SIZE> <<< grid, block>>>(A, B, C, M, N, K);
@@ -243,7 +247,7 @@ void dgemm_ta_gpu(const double *A, const double *B, double *C, const int M, cons
                        N, M, K,
                        &alpha,
                        B, N,
-                       A, M, // A, M 
+                       A, M, // A, M
                        &beta,
                        C, N);
     checkCublasErrors(stat);
@@ -311,7 +315,7 @@ void dgemm_tb_gpu(const double *A, const double *B, const double *C, double *D, 
                        D, M,
                        D, M);
     checkCublasErrors(stat);
-    
+
 #endif
 }
 
@@ -320,77 +324,77 @@ void dgemm_tb_gpu(const double *A, const double *B, const double *C, double *D, 
  *  Optimized matrix multiply kernels using shared memory.
  */
 // __global__ void dgemm_optimized(const double *A, const double *B,
-                                // double *C,
-                                // const int M, const int N, const int K) {
-    /*
-     * FILLME: fill the code.
-     */
+// double *C,
+// const int M, const int N, const int K) {
+/*
+ * FILLME: fill the code.
+ */
 
-    /* 
-    // from https://stackoverflow.com/questions/18815489/cuda-tiled-matrix-matrix-multiplication-with-shared-memory-and-matrix-size-whic/18856054
-    double CValue = 0;
-    const int ARows = M;
-    const int ACols = K;
-    const int BRows = K;
-    const int BCols = N;
-    const int CRows = M;
-    const int CCols = N;
+/*
+// from https://stackoverflow.com/questions/18815489/cuda-tiled-matrix-matrix-multiplication-with-shared-memory-and-matrix-size-whic/18856054
+double CValue = 0;
+const int ARows = M;
+const int ACols = K;
+const int BRows = K;
+const int BCols = N;
+const int CRows = M;
+const int CCols = N;
 
-    int Row = blockIdx.y*TILE_DIM + threadIdx.y;
-    int Col = blockIdx.x*TILE_DIM + threadIdx.x;
+int Row = blockIdx.y*TILE_DIM + threadIdx.y;
+int Col = blockIdx.x*TILE_DIM + threadIdx.x;
 
-    __shared__ double As[TILE_DIM][TILE_DIM];
-    __shared__ double Bs[TILE_DIM][TILE_DIM];
+__shared__ double As[TILE_DIM][TILE_DIM];
+__shared__ double Bs[TILE_DIM][TILE_DIM];
 
-    for (int k = 0; k < (TILE_DIM + ACols - 1)/TILE_DIM; k++) {
+for (int k = 0; k < (TILE_DIM + ACols - 1)/TILE_DIM; k++) {
 
-         if (k*TILE_DIM + threadIdx.x < ACols && Row < ARows)
-             As[threadIdx.y][threadIdx.x] = A[Row*ACols + k*TILE_DIM + threadIdx.x];
-         else
-             As[threadIdx.y][threadIdx.x] = 0.0;
+     if (k*TILE_DIM + threadIdx.x < ACols && Row < ARows)
+         As[threadIdx.y][threadIdx.x] = A[Row*ACols + k*TILE_DIM + threadIdx.x];
+     else
+         As[threadIdx.y][threadIdx.x] = 0.0;
 
-         if (k*TILE_DIM + threadIdx.y < BRows && Col < BCols)
-             Bs[threadIdx.y][threadIdx.x] = B[(k*TILE_DIM + threadIdx.y)*BCols + Col];
-         else
-             Bs[threadIdx.y][threadIdx.x] = 0.0;
+     if (k*TILE_DIM + threadIdx.y < BRows && Col < BCols)
+         Bs[threadIdx.y][threadIdx.x] = B[(k*TILE_DIM + threadIdx.y)*BCols + Col];
+     else
+         Bs[threadIdx.y][threadIdx.x] = 0.0;
 
-         __syncthreads();
+     __syncthreads();
 
-         for (int n = 0; n < TILE_DIM; ++n)
-             CValue += As[threadIdx.y][n] * Bs[n][threadIdx.x];
+     for (int n = 0; n < TILE_DIM; ++n)
+         CValue += As[threadIdx.y][n] * Bs[n][threadIdx.x];
 
-         __syncthreads();
+     __syncthreads();
+}
+
+if (Row < CRows && Col < CCols)
+    C[((blockIdx.y * blockDim.y + threadIdx.y)*CCols) +
+       (blockIdx.x * blockDim.x)+ threadIdx.x] = CValue;
+*/
+// from parboil sgemm
+/*
+// Partial results
+double c[TILE_N];
+for (int i=0; i < TILE_N; i++) c[i] = 0.0;
+int mid = threadIdx.y * blockDim.x + threadIdx.x; //flattened id
+int m = blockIdx.x * TILE_M + mid;
+int n = blockIdx.y * TILE_N + threadIdx.x;
+__shared__ double b_s[TILE_TB_HEIGHT][TILE_N];
+for (int i = 0; i < K; i+=TILE_TB_HEIGHT) {
+    double a;
+    b_s[threadIdx.y][threadIdx.x]=B[n + (i+threadIdx.y)*N];
+    __syncthreads();
+    for (int j = 0; j < TILE_TB_HEIGHT; j++) {
+        a = A[m + (i+j)*K];
+        for (int kk = 0; kk < TILE_N; kk++)
+            c[kk] += a * b_s[j][kk];
     }
-
-    if (Row < CRows && Col < CCols)
-        C[((blockIdx.y * blockDim.y + threadIdx.y)*CCols) +
-           (blockIdx.x * blockDim.x)+ threadIdx.x] = CValue;
-    */
-    // from parboil sgemm
-    /*
-    // Partial results 
-    double c[TILE_N];
-    for (int i=0; i < TILE_N; i++) c[i] = 0.0;
-    int mid = threadIdx.y * blockDim.x + threadIdx.x; //flattened id
-    int m = blockIdx.x * TILE_M + mid;
-    int n = blockIdx.y * TILE_N + threadIdx.x;
-    __shared__ double b_s[TILE_TB_HEIGHT][TILE_N];
-    for (int i = 0; i < K; i+=TILE_TB_HEIGHT) {
-        double a; 
-        b_s[threadIdx.y][threadIdx.x]=B[n + (i+threadIdx.y)*N];
-        __syncthreads();
-        for (int j = 0; j < TILE_TB_HEIGHT; j++) {
-            a = A[m + (i+j)*K];
-            for (int kk = 0; kk < TILE_N; kk++)
-                c[kk] += a * b_s[j][kk];
-        }
-        __syncthreads();
-    }
-    int t = N*blockIdx.y * TILE_N + m;
-    for (int i = 0; i < TILE_N; i++) {
-        // C[t+i*ldc] = C[t+i*ldc] * beta + alpha * c[i];
-        C[t+i*N] = c[i];
-    }
-    */
+    __syncthreads();
+}
+int t = N*blockIdx.y * TILE_N + m;
+for (int i = 0; i < TILE_N; i++) {
+    // C[t+i*ldc] = C[t+i*ldc] * beta + alpha * c[i];
+    C[t+i*N] = c[i];
+}
+*/
 
 // }
