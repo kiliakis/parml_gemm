@@ -111,7 +111,7 @@ __global__ void dgemm_ta_optimized(const double *A, const double *B,
     double CValue = 0;
     const int ARows = M;
     const int ACols = K;
-    const int BRows = K
+    const int BRows = K;
     const int BCols = N;
     const int CRows = M;
     const int CCols = N;
