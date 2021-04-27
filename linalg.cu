@@ -157,7 +157,7 @@ __global__ void dgemm_tb_optimized(const double *A, const double *B, const doubl
 // Matrices are stored in row-major order.
 void dgemm_gpu(const double *A, const double *B, double *C, const int M, const int N, const int K) {
 #ifndef CUBLAS
-    const int BLOCK_SIZE = 16;
+    const int BLOCK_SIZE = 32;
 #if defined(_GPU_GEMM_NAIVE)
     dim3 block(BLOCK_SIZE, BLOCK_SIZE);
     dim3 grid((N + BLOCK_SIZE - 1) / BLOCK_SIZE,
@@ -170,9 +170,10 @@ void dgemm_gpu(const double *A, const double *B, double *C, const int M, const i
      *  FILLME: Set up the blocks, grid and the shared memory size.
      */
     dim3 block(BLOCK_SIZE, BLOCK_SIZE);
-    dim3 grid(N/block.x, K/block.y);
+    dim3 grid((N + block.x - 1) / block.x, 
+              (K + block.y - 1) / block.y);
     size_t shmem_size = 2 * BLOCK_SIZE * BLOCK_SIZE * sizeof(double);
-    dgemm_optimized<16> <<< grid, block>>>(A, B, C, M, N, K);
+    dgemm_optimized<BLOCK_SIZE> <<< grid, block>>>(A, B, C, M, N, K);
 
     // dim3 block(TILE_N, TILE_TB_HEIGHT);
     // dim3 grid(M/TILE_M, N/TILE_N);
