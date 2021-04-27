@@ -6,7 +6,10 @@
 extern cublasHandle_t cublas_handle;
 #endif
 
-#define TILE_DIM 32
+// #define TILE_DIM 32
+#define TILE_N 16 
+#define TILE_TB_HEIGHT 8
+#define TILE_M (TILE_N*TILE_TB_HEIGHT)
 /*
  *  Naive matrix multiply kernels.
  */
@@ -61,6 +64,8 @@ __global__ void dgemm_optimized(const double *A, const double *B,
     /*
      * FILLME: fill the code.
      */
+
+    /* 
     // from https://stackoverflow.com/questions/18815489/cuda-tiled-matrix-matrix-multiplication-with-shared-memory-and-matrix-size-whic/18856054
     double CValue = 0;
     const int ARows = M;
@@ -99,6 +104,32 @@ __global__ void dgemm_optimized(const double *A, const double *B,
     if (Row < CRows && Col < CCols)
         C[((blockIdx.y * blockDim.y + threadIdx.y)*CCols) +
            (blockIdx.x * blockDim.x)+ threadIdx.x] = CValue;
+    */
+    // from parboil sgemm
+    // Partial results 
+    double c[TILE_N];
+    for (int i=0; i < TILE_N; i++) c[i] = 0.0;
+    int mid = threadIdx.y * blockDim.x + threadIdx.x; //flattened id
+    int m = blockIdx.x * TILE_M + mid;
+    int n = blockIdx.y * TILE_N + threadIdx.x;
+    __shared__ double b_s[TILE_TB_HEIGHT][TILE_N];
+    for (int i = 0; i < K; i+=TILE_TB_HEIGHT) {
+        double a; 
+        b_s[threadIdx.y][threadIdx.x]=B[n + (i+threadIdx.y)*N];
+        __syncthreads();
+        for (int j = 0; j < TILE_TB_HEIGHT; j++) {
+            a = A[m + (i+j)*K];
+            for (int kk = 0; kk < TILE_N; kk++)
+                c[kk] += a * b_s[j][kk];
+        }
+        __syncthreads();
+    }
+    int t = N*blockIdx.y * TILE_N + m;
+    for (int i = 0; i < TILE_N; i++) {
+        // C[t+i*ldc] = C[t+i*ldc] * beta + alpha * c[i];
+        C[t+i*N] = C[t+i*N] + c[i];
+    }
+
 }
 
 __global__ void dgemm_ta_optimized(const double *A, const double *B,
@@ -107,45 +138,6 @@ __global__ void dgemm_ta_optimized(const double *A, const double *B,
     /*
      * FILLME: fill the code.
      */
-    // from https://stackoverflow.com/questions/18815489/cuda-tiled-matrix-matrix-multiplication-with-shared-memory-and-matrix-size-whic/18856054
-    double CValue = 0;
-    const int ARows = M;
-    const int ACols = K;
-    const int BRows = K;
-    const int BCols = N;
-    const int CRows = M;
-    const int CCols = N;
-
-    int Row = blockIdx.y*TILE_DIM + threadIdx.y;
-    int Col = blockIdx.x*TILE_DIM + threadIdx.x;
-
-    __shared__ double As[TILE_DIM][TILE_DIM];
-    __shared__ double Bs[TILE_DIM][TILE_DIM];
-
-    for (int k = 0; k < (TILE_DIM + ACols - 1)/TILE_DIM; k++) {
-
-         if (k*TILE_DIM + threadIdx.x < ACols && Row < ARows)
-             As[threadIdx.y][threadIdx.x] = A[Row*ACols + k*TILE_DIM + threadIdx.x];
-         else
-             As[threadIdx.y][threadIdx.x] = 0.0;
-
-         if (k*TILE_DIM + threadIdx.y < BRows && Col < BCols)
-             Bs[threadIdx.y][threadIdx.x] = B[(k*TILE_DIM + threadIdx.y)*BCols + Col];
-         else
-             Bs[threadIdx.y][threadIdx.x] = 0.0;
-
-         __syncthreads();
-
-         for (int n = 0; n < TILE_DIM; ++n)
-             CValue += As[threadIdx.y][n] * Bs[n][threadIdx.x];
-
-         __syncthreads();
-    }
-
-    if (Row < CRows && Col < CCols)
-        C[((blockIdx.y * blockDim.y + threadIdx.y)*CCols) +
-           (blockIdx.x * blockDim.x)+ threadIdx.x] = CValue;
-
 }
 
 __global__ void dgemm_tb_optimized(const double *A, const double *B, const double *C,
@@ -172,10 +164,9 @@ void dgemm_gpu(const double *A, const double *B, double *C, const int M, const i
     /*
      *  FILLME: Set up the blocks, grid and the shared memory size.
      */
-    dim3 block(BLOCK_SIZE, BLOCK_SIZE);
-    dim3 grid((N + BLOCK_SIZE - 1) / BLOCK_SIZE,
-              (M + BLOCK_SIZE - 1) / BLOCK_SIZE);
-    size_t shmem_size = TILE_DIM * TILE_DIM * sizeof(double);
+    dim3 block(TILE_N, TILE_TB_HEIGHT);
+    dim3 grid(M/TILE_M, N/TILE_N);
+    size_t shmem_size = TILE_TB_HEIGHT * TILE_N * sizeof(double);
     dgemm_optimized <<< grid, block, shmem_size>>>(A, B, C, M, N, K);
     checkCudaErrors(cudaPeekAtLastError());
     checkCudaErrors(cudaDeviceSynchronize());
