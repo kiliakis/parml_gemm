@@ -240,7 +240,7 @@ void dgemm_ta_gpu(const double *A, const double *B, double *C, const int M, cons
                        N, M, K,
                        &alpha,
                        B, N,
-                       A, K, // A, M
+                       A, M, // A, M 
                        &beta,
                        C, N);
     checkCublasErrors(stat);
@@ -286,7 +286,7 @@ void dgemm_tb_gpu(const double *A, const double *B, const double *C, double *D, 
                        CUBLAS_OP_T, CUBLAS_OP_N,
                        N, M, K,
                        &alpha,
-                       B, N, // B, K
+                       B, K, // B, K
                        A, K,
                        &beta,
                        D, N);
@@ -301,7 +301,7 @@ void dgemm_tb_gpu(const double *A, const double *B, const double *C, double *D, 
     beta = 1;
     stat = cublasDgeam(cublas_handle,
                        CUBLAS_OP_N, CUBLAS_OP_N,
-                       N, M,
+                       M, N,
                        &alpha,
                        C, M,
                        &beta,

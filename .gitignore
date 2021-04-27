@@ -1,0 +1,7 @@
+*.swp
+*.o
+test_blas
+test_cublas
+test_cuda
+test_cuda_opt
+test_omp
