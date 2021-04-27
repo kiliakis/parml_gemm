@@ -32,7 +32,7 @@ all: test_cuda test_cuda_opt test_cublas
 test_cuda: $(OBJS) $(GPU_OBJS) linalg_cuda.o test_gpu.o
 	$(CC) $(CFLAGS) -o $@ $^ $(GPU_LDFLAGS) $(LIBS) 
 
-test_cuda_opt: $(OBJS) $(GPU_OBJS) linalg_cuda.o test_gpu_opt.o
+test_cuda_opt: $(OBJS) $(GPU_OBJS) linalg_cuda_opt.o test_gpu_opt.o
 	$(CC) $(CFLAGS) -o $@ $^ $(GPU_LDFLAGS) $(LIBS) 
 
 test_cublas: $(OBJS) $(GPU_OBJS) linalg_cublas.o test_gpu.o
