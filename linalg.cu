@@ -111,10 +111,10 @@ template <int BLOCK_SIZE> __global__ void dgemm_optimized(
         // Load the matrices from device memory
         // to shared memory; each thread loads
         // one element of each matrix
-        if (a + K * ty + tx < M * K)
+        if ((a + K * ty + tx < M * K) && (ty < BLOCK_SIZE) && (tx < BLOCK_SIZE))
             As[ty][tx] = A[a + K * ty + tx];
 
-        if (b + N * ty + tx < K * N)
+        if ((b + N * ty + tx < K * N) && (ty < BLOCK_SIZE) && (tx < BLOCK_SIZE))
             Bs[ty][tx] = B[b + N * ty + tx];
 
         // Synchronize to make sure the matrices are loaded
