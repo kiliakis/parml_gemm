@@ -1,0 +1,78 @@
+CUDA_PREFIX = /usr/local/cuda
+
+CC = $(CUDA_PREFIX)/bin/nvcc
+CFLAGS = -Xcompiler="-O3 -std=c99 -fopenmp"
+GPU_CFLAGS = -ccbin=gcc -O3 -rdc=true --gpu-architecture=sm_35
+CPPFLAGS += -I$(OPENBLAS_ROOT)/include -D_BSD_SOURCE
+GPU_CPPFLAGS = -I$(CUDA_PREFIX)/include -DCUDA -D_BSD_SOURCE
+LDFLAGS += -L$(OPENBLAS_ROOT)/lib
+GPU_LDFLAGS = --gpu-architecture=sm_35 --linker-options "-lcuda -lcudadevrt -lcublas"
+LIBS = -lm
+
+# ifeq ($(GEMM_OPTIMIZED), 1)
+#    GPU_CPPFLAGS += -D_GPU_GEMM_OPT
+# else
+#    GPU_CPPFLAGS += -D_GPU_GEMM_NAIVE
+# endif
+
+# OBJS=network_init.o network_destroy.o network_batch.o init.o relu.o shuffle.o timer.o
+OBJS=timer.o
+GPU_OBJS=cuda_utils.o linalg.o
+
+# all: deepnn_cuda deepnn_cublas test_cuda test_cublas
+all: test_cuda test_cuda_opt test_cublas
+
+%.o: %.c 
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c -o $@ $<
+
+%.o: %.cu
+	$(CC) $(GPU_CPPFLAGS) $(GPU_CFLAGS) -c -o $@ $<
+
+
+test_cuda: $(OBJS) $(GPU_OBJS) linalg_cuda.o test_gpu.o
+	$(CC) $(CFLAGS) -o $@ $^ $(GPU_LDFLAGS) $(LIBS) 
+
+test_cuda_opt: $(OBJS) $(GPU_OBJS) linalg_cuda.o test_gpu_opt.o
+	$(CC) $(CFLAGS) -o $@ $^ $(GPU_LDFLAGS) $(LIBS) 
+
+test_cublas: $(OBJS) $(GPU_OBJS) linalg_cublas.o test_gpu.o
+	$(CC) $(CFLAGS) -o $@ $^ $(GPU_LDFLAGS) $(LIBS)
+
+# deepnn_cuda: $(OBJS) $(GPU_OBJS) linalg_cuda.o main_gpu.o
+# 	$(CC) $(CFLAGS) -o $@ $^ $(GPU_LDFLAGS) $(LIBS) 
+
+# deepnn_cublas: $(OBJS) $(GPU_OBJS) linalg_cublas.o main_gpu.o
+# 	$(CC) $(CFLAGS) -o $@ $^ $(GPU_LDFLAGS) $(LIBS)
+
+.PHONY: linalg_cuda_opt.o
+linalg_cuda_opt.o: 
+	$(CC) $(GPU_CFLAGS) $(GPU_CPPFLAGS) -D_GPU_GEMM_OPT -o linalg_cuda_opt.o -c linalg.cu
+
+.PHONY: linalg_cuda.o
+linalg_cuda.o: 
+	$(CC) $(GPU_CFLAGS) $(GPU_CPPFLAGS) -D_GPU_GEMM_NAIVE -o linalg_cuda.o -c linalg.cu
+
+.PHONY: linalg_cublas.o
+linalg_cublas.o: 
+	$(CC) $(GPU_CFLAGS) $(GPU_CPPFLAGS) -D_GPU_GEMM_NAIVE -DCUBLAS -o linalg_cublas.o -c linalg.cu
+
+
+.PHONY: test_gpu.o
+test_gpu.o: 
+	$(CC) $(CFLAGS) $(GPU_CFLAGS) $(GPU_CPPFLAGS) -D_GPU_GEMM_NAIVE -o test_gpu.o -c test.c
+
+.PHONY: test_gpu_opt.o
+test_gpu_opt.o: 
+	$(CC) $(CFLAGS) $(GPU_CFLAGS) $(GPU_CPPFLAGS) -D_GPU_GEMM_OPT -o test_gpu_opt.o -c test.c
+
+# .PHONY: main_gpu.o
+# main_gpu.o: 
+# 	$(CC) $(CFLAGS) $(GPU_CFLAGS) $(GPU_CPPFLAGS) -o main_gpu.o -c main.c
+
+
+clean:
+	rm -f *.o
+distclean:
+# 	rm -f *.o deepnn_cuda deepnn_cublas test_cuda test_cublas
+	rm -f *.o test_cuda test_cuda_opt test_cublas 
+

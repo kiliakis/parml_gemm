@@ -1,0 +1,51 @@
+OPENBLAS_ROOT = /home/kiliakis/install
+
+CC = gcc
+CFLAGS = -O3 -std=c99 -fopenmp
+CPPFLAGS += -I$(OPENBLAS_ROOT)/include -D_BSD_SOURCE
+LDFLAGS += -L$(OPENBLAS_ROOT)/lib
+LIBS = -lm
+
+# OBJS=network_init.o network_destroy.o network_batch.o init.o relu.o shuffle.o timer.o
+OBJS=timer.o
+
+# all: deepnn_omp deepnn_blas test_omp test_blas
+all: test_omp test_blas
+
+%.o: %.c 
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c -o $@ $<
+
+
+test_omp: $(OBJS) linalg_omp.o test_cpu.o
+	$(CC) $(CFLAGS) -o $@ $^ $(LIBS) 
+
+test_blas: $(OBJS) linalg_blas.o test_cpu.o
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LIBS) -lopenblas
+
+# deepnn_omp: $(OBJS) linalg_omp.o main_cpu.o
+# 	$(CC) $(CFLAGS) -o $@ $^ $(LIBS) 
+
+# deepnn_blas: $(OBJS) linalg_blas.o main_cpu.o
+# 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LIBS) -lopenblas
+
+# .PHONY: main_cpu.o
+# main_cpu.o: 
+# 	$(CC) $(CFLAGS) -o main_cpu.o -c main.c
+
+.PHONY: test_cpu.o
+test_cpu.o: 
+	$(CC) $(CFLAGS) -o test_cpu.o -c test.c
+
+.PHONY: linalg_omp.o
+linalg_omp.o: 
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o linalg_omp.o -c linalg.c
+.PHONY: linalg_blas.o
+linalg_blas.o: 
+	$(CC) $(CFLAGS) $(CPPFLAGS) -DCBLAS -o linalg_blas.o -c linalg.c
+
+clean:
+	rm -f *.o
+distclean:
+# 	rm -f *.o deepnn_omp deepnn_blas test_omp test_blas
+	rm -f *.o test_omp test_blas
+
