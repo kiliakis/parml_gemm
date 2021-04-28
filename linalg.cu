@@ -67,14 +67,6 @@ template <int BLOCK_SIZE> __global__ void dgemm_optimized(
     double *C,
     const int M, const int N, const int K)
 {
-    // Block index
-    // int bx = blockIdx.x;
-    // int by = blockIdx.y;
-
-    // Thread index
-    // int tx = threadIdx.x;
-    // int ty = threadIdx.y;
-
     int row = blockIdx.y * BLOCK_SIZE + threadIdx.y;
     int col = blockIdx.x * BLOCK_SIZE + threadIdx.x;
 
@@ -99,11 +91,14 @@ template <int BLOCK_SIZE> __global__ void dgemm_optimized(
 
     // Declaration of the shared memory array As used to
     // store the sub-matrix of A
-    __shared__ double As[BLOCK_SIZE][BLOCK_SIZE];
+    __shared__ double shmem[2 * BLOCK_SIZE * BLOCK_SIZE];
+    double *As = shmem;
+    double *Bs = shmem[BLOCK_SIZE*BLOCK_SIZE]; 
+    // __shared__ double As[BLOCK_SIZE][BLOCK_SIZE];
 
     // Declaration of the shared memory array Bs used to
     // store the sub-matrix of B
-    __shared__ double Bs[BLOCK_SIZE][BLOCK_SIZE];
+    // __shared__ double Bs[BLOCK_SIZE][BLOCK_SIZE];
 
     // Loop over all the sub-matrices of A and B
     // required to compute the block sub-matrix
@@ -116,14 +111,18 @@ template <int BLOCK_SIZE> __global__ void dgemm_optimized(
         // to shared memory; each thread loads
         // one element of each matrix
         if (k*BLOCK_SIZE + threadIdx.x < K && row < M)
-            As[threadIdx.y][threadIdx.x] = A[row*K + k*BLOCK_SIZE + threadIdx.x];
+            // As[threadIdx.y][threadIdx.x] = A[row*K + k*BLOCK_SIZE + threadIdx.x];
+            As[threadIdx.y* BLOCK_SIZE + threadIdx.x] = A[row*K + k*BLOCK_SIZE + threadIdx.x];
         else
-            As[threadIdx.y][threadIdx.x] = 0.0;
+            // As[threadIdx.y][threadIdx.x] = 0.0;
+            As[threadIdx.y* BLOCK_SIZE + threadIdx.x] = 0.0;
 
         if (k*BLOCK_SIZE + threadIdx.y < K && col < N)
-            Bs[threadIdx.y][threadIdx.x] = B[(k*BLOCK_SIZE + threadIdx.y)*N + col];
+            // Bs[threadIdx.y][threadIdx.x] = B[(k*BLOCK_SIZE + threadIdx.y)*N + col];
+            Bs[threadIdx.y * BLOCK_SIZE + threadIdx.x] = B[(k*BLOCK_SIZE + threadIdx.y)*N + col];
         else
-            Bs[threadIdx.y][threadIdx.x] = 0.0;
+            // Bs[threadIdx.y][threadIdx.x] = 0.0;
+            Bs[threadIdx.y * BLOCK_SIZE + threadIdx.x] = 0.0;
 
         // Synchronize to make sure the matrices are loaded
         __syncthreads();
@@ -131,9 +130,10 @@ template <int BLOCK_SIZE> __global__ void dgemm_optimized(
         // Multiply the two matrices together;
         // each thread computes one element
         // of the block sub-matrix
-#pragma unroll
-        for (int k = 0; k < BLOCK_SIZE; ++k) {
-            Csub += As[threadIdx.y][k] * Bs[k][threadIdx.x];
+        #pragma unroll
+        for (int n = 0; n < BLOCK_SIZE; ++n) {
+            Csub += As[threadIdx.y*BLOCK_SIZE + n] * Bs[n*BLOCK_SIZE+threadIdx.x];
+            // Csub += As[threadIdx.y][k] * Bs[k][threadIdx.x];
         }
 
         // Synchronize to make sure that the preceding
@@ -183,7 +183,7 @@ void dgemm_gpu(const double *A, const double *B, double *C, const int M, const i
      */
     dim3 block(BLOCK_SIZE, BLOCK_SIZE);
     dim3 grid((N + block.x - 1) / block.x,
-              (K + block.y - 1) / block.y);
+              (M + block.y - 1) / block.y);
     size_t shmem_size = 2 * BLOCK_SIZE * BLOCK_SIZE * sizeof(double);
     dgemm_optimized<BLOCK_SIZE> <<< grid, block, shmem_size>>>(A, B, C, M, N, K);
 
