@@ -123,12 +123,66 @@ template <int BLOCK_SIZE> __global__ void dgemm_optimized(
         C[row*N + col] = Csub;
 }
 
+// A: K x M, B: K x N, C: M x N
 __global__ void dgemm_ta_optimized(const double *A, const double *B,
                                    double *C,
                                    const int M, const int N, const int K) {
-    /*
-     * FILLME: fill the code.
-     */
+
+    int row = blockIdx.y * BLOCK_SIZE + threadIdx.y;
+    int col = blockIdx.x * BLOCK_SIZE + threadIdx.x;
+
+    // Csub is used to store the element of the block sub-matrix
+    // that is computed by the thread
+    double Csub = 0;
+
+    // Declaration of the shared memory array As, Bs used to
+    // store the sub-matrix of A, B
+    __shared__ double shmem[2 * BLOCK_SIZE * BLOCK_SIZE];
+    double *As = shmem;
+    double *Bs = &(shmem[BLOCK_SIZE*BLOCK_SIZE]); 
+
+    for (int k = 0; k < (BLOCK_SIZE + K -1); k+=BLOCK_SIZE) {
+
+        // Load the matrices from device memory
+        // to shared memory; each thread loads
+        // one element of each matrix
+        // if (k + threadIdx.x < K && row < M)
+        if (k + threadIdx.x < K && row < M)
+            // As[threadIdx.y* BLOCK_SIZE + threadIdx.x] = A[row*K + k + threadIdx.x];
+            As[threadIdx.y* BLOCK_SIZE + threadIdx.x] = A[row + (k + threadIdx.x)*M];
+        else
+            // As[threadIdx.y][threadIdx.x] = 0.0;
+            As[threadIdx.y* BLOCK_SIZE + threadIdx.x] = 0.0;
+
+        if (k + threadIdx.y < K && col < N)
+            // Bs[threadIdx.y][threadIdx.x] = B[(k*BLOCK_SIZE + threadIdx.y)*N + col];
+            Bs[threadIdx.y * BLOCK_SIZE + threadIdx.x] = B[(k + threadIdx.y)*N + col];
+        else
+            // Bs[threadIdx.y][threadIdx.x] = 0.0;
+            Bs[threadIdx.y * BLOCK_SIZE + threadIdx.x] = 0.0;
+
+        // Synchronize to make sure the matrices are loaded
+        __syncthreads();
+
+        // Multiply the two matrices together;
+        // each thread computes one element
+        // of the block sub-matrix
+        #pragma unroll BLOCK_SIZE
+        for (int n = 0; n < BLOCK_SIZE; ++n) {
+            Csub += As[threadIdx.y*BLOCK_SIZE + n] * Bs[n*BLOCK_SIZE+threadIdx.x];
+            // Csub += As[threadIdx.y][k] * Bs[k][threadIdx.x];
+        }
+
+        // Synchronize to make sure that the preceding
+        // computation is done before loading two new
+        // sub-matrices of A and B in the next iteration
+        __syncthreads();
+    }
+
+    // Write the block sub-matrix to device memory;
+    // each thread writes one element
+    if (row < M && col < N)
+        C[row*N + col] = Csub;
 }
 
 __global__ void dgemm_tb_optimized(const double *A, const double *B, const double *C,
