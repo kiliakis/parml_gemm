@@ -294,7 +294,7 @@ void dgemm_gpu(const double *A, const double *B, double *C, const int M, const i
 // Matrices are stored in row-major order.
 void dgemm_ta_gpu(const double *A, const double *B, double *C, const int M, const int N, const int K) {
 #ifndef CUBLAS
-    const int BLOCK_SIZE = 16;
+    const int BLOCK_SIZE = 32;
 #if defined(_GPU_GEMM_NAIVE)
     dim3 block(BLOCK_SIZE, BLOCK_SIZE);
     dim3 grid((N + BLOCK_SIZE - 1) / BLOCK_SIZE,
@@ -337,7 +337,7 @@ void dgemm_ta_gpu(const double *A, const double *B, double *C, const int M, cons
 // Matrices are stored in row-major order.
 void dgemm_tb_gpu(const double *A, const double *B, const double *C, double *D, const int M, const int N, const int K) {
 #ifndef CUBLAS
-    const int BLOCK_SIZE = 16;
+    const int BLOCK_SIZE = 32;
 #if defined(_GPU_GEMM_NAIVE)
     dim3 block(BLOCK_SIZE, BLOCK_SIZE);
     dim3 grid((N + BLOCK_SIZE - 1) / BLOCK_SIZE,
