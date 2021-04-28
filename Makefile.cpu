@@ -1,4 +1,4 @@
-OPENBLAS_ROOT = $HOME/install
+OPENBLAS_ROOT = $(HOME)/install
 
 CC = gcc
 CFLAGS = -O3 -std=c99 -fopenmp
