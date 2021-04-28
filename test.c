@@ -11,7 +11,7 @@
 cublasHandle_t cublas_handle;
 #endif
 
-int validate = 1;
+int validate_ref = 1;
 int debug = 0;
 xtimer_t dgemm_ref_timer, dgemm_ref_tb_timer, dgemm_ref_ta_timer;
 xtimer_t dgemm_timer, dgemm_tb_timer, dgemm_ta_timer;
@@ -76,7 +76,7 @@ static void inc_init(double *data, const int N) {
 
 
 static bool is_matching(const double *a, const double *b, const int N) {
-    if (validate){
+    if (validate_ref){
         for (int i = 0; i < N; i++) {
             double diff = fabs(a[i] - b[i]);
             if (diff > 1e-8) { // double has just 6.5 significant digits
@@ -124,7 +124,7 @@ static bool test_dgemm(int M, int N, int K) {
 #endif
 
     // Reference implementation
-    if (validate){
+    if (validate_ref){
         timer_start(&dgemm_ref_timer);
         ref_dgemm(a, b, c_ref, M, N, K);
         timer_stop(&dgemm_ref_timer);
@@ -185,7 +185,7 @@ static bool test_dgemm_ta(int M, int N, int K) {
     checkCudaErrors(cudaMemcpy(dev_a, a, M * K * sizeof(double), cudaMemcpyHostToDevice));
     checkCudaErrors(cudaMemcpy(dev_b, b, K * N * sizeof(double), cudaMemcpyHostToDevice));
 #endif
-    if (validate){
+    if (validate_ref){
         timer_start(&dgemm_ref_ta_timer);
 
         // Reference implementation
@@ -255,7 +255,7 @@ static bool test_dgemm_tb(int M, int N, int K) {
     checkCudaErrors(cudaMemcpy(dev_b, b, K * N * sizeof(double), cudaMemcpyHostToDevice));
     checkCudaErrors(cudaMemcpy(dev_c, c, M * N * sizeof(double), cudaMemcpyHostToDevice));
 #endif
-    if (validate) {
+    if (validate_ref) {
         timer_start(&dgemm_ref_tb_timer);
 
         // Reference implementation
@@ -305,7 +305,7 @@ int main(int argc, char **argv) {
     int M = 1<<9; 
     int N = 1<<10;
     int K = 1<<11;
-    validate = 1;
+    validate_ref = 1;
     debug = 0;
     if(argc > 1){
         M = atoi(argv[1]);        
@@ -317,12 +317,12 @@ int main(int argc, char **argv) {
         K = atoi(argv[3]);        
     }
     if(argc > 4){
-        validate = atoi(argv[4]);        
+        validate_ref = atoi(argv[4]);        
     }
     if(argc > 5){
         debug = atoi(argv[5]);
     }
-    printf("M:%d, N:%d, K:%d, validate:%d, debug: %d\n", M, N, K, validate, debug);
+    printf("M:%d, N:%d, K:%d, validate:%d, debug: %d\n", M, N, K, validate_ref, debug);
 
     timer_clear(&dgemm_timer);
     timer_clear(&dgemm_ta_timer);
