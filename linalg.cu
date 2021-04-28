@@ -124,7 +124,7 @@ template <int BLOCK_SIZE> __global__ void dgemm_optimized(
 }
 
 // A: K x M, B: K x N, C: M x N
-__global__ void dgemm_ta_optimized(const double *A, const double *B,
+template <int BLOCK_SIZE> __global__ void dgemm_ta_optimized(const double *A, const double *B,
                                    double *C,
                                    const int M, const int N, const int K) {
 
@@ -255,6 +255,7 @@ void dgemm_ta_gpu(const double *A, const double *B, double *C, const int M, cons
     checkCudaErrors(cudaPeekAtLastError());
     checkCudaErrors(cudaDeviceSynchronize());
 #elif defined(_GPU_GEMM_OPT)
+
     dim3 block(BLOCK_SIZE, BLOCK_SIZE);
     dim3 grid((N + block.x - 1) / block.x,
               (M + block.y - 1) / block.y);
