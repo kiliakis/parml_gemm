@@ -2,11 +2,11 @@ CUDA_PREFIX = /usr/local/cuda
 
 CC = $(CUDA_PREFIX)/bin/nvcc
 CFLAGS = -Xcompiler="-O3 -std=c99 -fopenmp"
-GPU_CFLAGS = -ccbin=gcc -O3 -rdc=true --gpu-architecture=sm_35 --gpu-architecture=sm_61
+GPU_CFLAGS = -ccbin=gcc -O3 -rdc=true -gencode arch=compute_35,code=sm_35 -gencode arch=compute_61,code=sm_61
 CPPFLAGS += -I$(OPENBLAS_ROOT)/include -D_BSD_SOURCE
 GPU_CPPFLAGS = -I$(CUDA_PREFIX)/include -DCUDA -D_BSD_SOURCE
 LDFLAGS += -L$(OPENBLAS_ROOT)/lib
-GPU_LDFLAGS = --gpu-architecture=sm_35 --gpu-architecture=sm_61 --linker-options "-lcuda -lcudadevrt -lcublas"
+GPU_LDFLAGS = -gencode arch=compute_35,code=sm_35 -gencode arch=compute_61,code=sm_61 --linker-options "-lcuda -lcudadevrt -lcublas"
 LIBS = -lm
 
 # ifeq ($(GEMM_OPTIMIZED), 1)
