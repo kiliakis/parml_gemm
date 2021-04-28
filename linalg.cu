@@ -145,8 +145,8 @@ template <int BLOCK_SIZE> __global__ void dgemm_optimized(
     // Write the block sub-matrix to device memory;
     // each thread writes one element
     // int c = N * BLOCK_SIZE * by + BLOCK_SIZE * bx;
-    if (row < N && col < M)
-        C[row*M + col] = Csub;
+    if (row < M && col < N)
+        C[row*N + col] = Csub;
 }
 
 __global__ void dgemm_ta_optimized(const double *A, const double *B,
