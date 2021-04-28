@@ -80,8 +80,6 @@ template <int BLOCK_SIZE> __global__ void dgemm_optimized(
     // double *As = shmem;
     double *Bs = &(As[BLOCK_SIZE * BLOCK_SIZE]);
 
-    const int aid = threadIdx.y * BLOCK_SIZE;
-
     for (int k = 0; k < (BLOCK_SIZE + K - 1); k += BLOCK_SIZE) {
 
         // Load the matrices from device memory
@@ -89,7 +87,7 @@ template <int BLOCK_SIZE> __global__ void dgemm_optimized(
         // one element of each matrix
         if (k + threadIdx.x < K && row < M)
             // As[threadIdx.y][threadIdx.x] = A[row*K + k*BLOCK_SIZE + threadIdx.x];
-            As[aid + threadIdx.x] = A[row * K + k + threadIdx.x];
+            As[threadIdx.y * BLOCK_SIZE + threadIdx.x] = A[row * K + k + threadIdx.x];
         else
             // As[threadIdx.y][threadIdx.x] = 0.0;
             As[threadIdx.y * BLOCK_SIZE + threadIdx.x] = 0.0;
@@ -109,7 +107,7 @@ template <int BLOCK_SIZE> __global__ void dgemm_optimized(
         // of the block sub-matrix
 #pragma unroll BLOCK_SIZE
         for (int n = 0; n < BLOCK_SIZE; ++n) {
-            Csub += As[aid + n] * Bs[n * BLOCK_SIZE + threadIdx.x];
+            Csub += As[threadIdx.y * BLOCK_SIZE + n] * Bs[n * BLOCK_SIZE + threadIdx.x];
             // Csub += As[threadIdx.y][k] * Bs[k][threadIdx.x];
         }
 
