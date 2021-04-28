@@ -320,6 +320,7 @@ int main(int argc, char **argv) {
         printf("FAILED\n");
     }
 
+    return 0;
     printf("Testing DGEMM_TA... ");
     status = test_dgemm_ta(M, N, K);
     if (status) {
