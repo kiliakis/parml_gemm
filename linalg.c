@@ -35,7 +35,7 @@ void dgemm(const double *A, const double *B, double *C, const int M, const int N
                 for (int j = jj; j < MIN(jj + TILE_SIZE, N); ++j) {
                     // cij = C[j * M + i];
                     double sum = 0.;
-                    #pragma omp unroll
+                    #pragma omp unroll 16
                     for (int k = 0; k < K; ++k) {
                         sum += A[i * K + k] * B[k * N + j];
                     }
