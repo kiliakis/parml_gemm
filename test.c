@@ -332,25 +332,25 @@ int main(int argc, char **argv) {
     timer_clear(&dgemm_ref_tb_timer);
 
     bool status;
-    // printf("Testing DGEMM... ");
-    // status = test_dgemm(M, N, K);
-    // if (status) {
-    //     printf("PASS\n");
-    // } else {
-    //     printf("FAILED\n");
-    // }
-    // printf("DGEMM REF time: %.6lf\n", timer_elapsed_time(&dgemm_ref_timer));
-    // printf("DGEMM time: %.6lf\n", timer_elapsed_time(&dgemm_timer));
+    printf("Testing DGEMM... ");
+    status = test_dgemm(M, N, K);
+    if (status) {
+        printf("PASS\n");
+    } else {
+        printf("FAILED\n");
+    }
+    printf("DGEMM REF time: %.6lf\n", timer_elapsed_time(&dgemm_ref_timer));
+    printf("DGEMM time: %.6lf\n", timer_elapsed_time(&dgemm_timer));
 
-    // printf("Testing DGEMM_TA... ");
-    // status = test_dgemm_ta(M, N, K);
-    // if (status) {
-    //     printf("PASS\n");
-    // } else {
-    //     printf("FAILED\n");
-    // }
-    // printf("DGEMM_TA REF time: %.6lf\n", timer_elapsed_time(&dgemm_ref_ta_timer));
-    // printf("DGEMM_TA time: %.6lf\n", timer_elapsed_time(&dgemm_ta_timer));
+    printf("Testing DGEMM_TA... ");
+    status = test_dgemm_ta(M, N, K);
+    if (status) {
+        printf("PASS\n");
+    } else {
+        printf("FAILED\n");
+    }
+    printf("DGEMM_TA REF time: %.6lf\n", timer_elapsed_time(&dgemm_ref_ta_timer));
+    printf("DGEMM_TA time: %.6lf\n", timer_elapsed_time(&dgemm_ta_timer));
 
     printf("Testing DGEMM_TB... ");
     status = test_dgemm_tb(M, N, K);
