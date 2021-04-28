@@ -18,32 +18,32 @@ void dgemm(const double *A, const double *B, double *C, const int M, const int N
 #else
     int i, j, k;
     double sum;
-    // #pragma omp parallel for private(i,j,k,sum) collapse(2)
-    // for (i = 0; i < M; i++) {
-    //     for (j = 0; j < N; j++) {
-    //         sum = 0.;
-    //         for (k = 0; k < K; k++)
-    //             sum += A[i * K + k] * B[k * N + j];
-    //         C[i * N + j] = sum;
-    //     }
-    // }
-    const int TILE_SIZE = 512;
-    #pragma omp parallel for collapse(2)
-    for (int ii = 0; ii < M; ii += TILE_SIZE) {
-        for (int jj = 0; jj < N; jj += TILE_SIZE) {
-            for (int i = ii; i < MIN(ii + TILE_SIZE, M); ++i) {
-                for (int j = jj; j < MIN(jj + TILE_SIZE, N); ++j) {
-                    // cij = C[j * M + i];
-                    double sum = 0.;
-                    #pragma omp unroll 16
-                    for (int k = 0; k < K; ++k) {
-                        sum += A[i * K + k] * B[k * N + j];
-                    }
-                    C[i * N + j] = sum;
-                }
-            }
+    #pragma omp parallel for private(i,j,k,sum) collapse(2)
+    for (i = 0; i < M; i++) {
+        for (j = 0; j < N; j++) {
+            sum = 0.;
+            for (k = 0; k < K; k++)
+                sum += A[i * K + k] * B[k * N + j];
+            C[i * N + j] = sum;
         }
     }
+    // const int TILE_SIZE = 512;
+    // #pragma omp parallel for collapse(2)
+    // for (int ii = 0; ii < M; ii += TILE_SIZE) {
+    //     for (int jj = 0; jj < N; jj += TILE_SIZE) {
+    //         for (int i = ii; i < MIN(ii + TILE_SIZE, M); ++i) {
+    //             for (int j = jj; j < MIN(jj + TILE_SIZE, N); ++j) {
+    //                 // cij = C[j * M + i];
+    //                 double sum = 0.;
+    //                 #pragma omp unroll 16
+    //                 for (int k = 0; k < K; ++k) {
+    //                     sum += A[i * K + k] * B[k * N + j];
+    //                 }
+    //                 C[i * N + j] = sum;
+    //             }
+    //         }
+    //     }
+    // }
 
 #endif
 }
