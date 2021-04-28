@@ -27,7 +27,7 @@ void dgemm(const double *A, const double *B, double *C, const int M, const int N
     //         C[i * N + j] = sum;
     //     }
     // }
-    const int TILE_SIZE = 32;
+    const int TILE_SIZE = 512;
     #pragma omp parallel for collapse(2) schedule(static)
     for (int ii = 0; ii < M; ii += TILE_SIZE) {
         for (int jj = 0; jj < N; jj += TILE_SIZE) {
