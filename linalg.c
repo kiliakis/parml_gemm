@@ -1,4 +1,6 @@
 #include "linalg.h"
+#define MIN(a,b) (((a)<(b))?(a):(b))
+#define MAX(a,b) (((a)>(b))?(a):(b))
 
 // Computes C = A*B, where A is a M by K matrix, B is a K by N matrix, C is a M by N matrix.
 // Matrices are stored in row-major order.
@@ -29,8 +31,8 @@ void dgemm(const double *A, const double *B, double *C, const int M, const int N
     #pragma omp parallel for collapse(2) schedule(static)
     for (int ii = 0; ii < M; ii += TILE_SIZE) {
         for (int jj = 0; jj < N; jj += TILE_SIZE) {
-            for (int i = ii; i < max(ii + TILE_SIZE, M); ++i) {
-                for (int j = jj; j < max(jj + TILE_SIZE, N); ++j) {
+            for (int i = ii; i < MIN(ii + TILE_SIZE, M); ++i) {
+                for (int j = jj; j < MIN(jj + TILE_SIZE, N); ++j) {
                     // cij = C[j * M + i];
                     double sum = 0.;
                     for (int k = 0; k < K; ++k) {
