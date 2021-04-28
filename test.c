@@ -241,10 +241,15 @@ static bool test_dgemm_tb(int M, int N, int K) {
     checkCudaErrors(cudaMalloc((void **)&dev_c, M * N * sizeof(double)));
     checkCudaErrors(cudaMalloc((void **)&dev_d, M * N * sizeof(double)));
 #endif
-
-    rand_init(a, M * K);
-    rand_init(b, K * N);
-    rand_init(c, M * N);
+    if(debug){
+        inc_init(a, M * K);
+        inc_init(b, K * N);
+        inc_init(c, M * N);
+    }else{
+        rand_init(a, M * K);
+        rand_init(b, K * N);
+        rand_init(c, M * N);
+    }
 #ifdef CUDA
     checkCudaErrors(cudaMemcpy(dev_a, a, M * K * sizeof(double), cudaMemcpyHostToDevice));
     checkCudaErrors(cudaMemcpy(dev_b, b, K * N * sizeof(double), cudaMemcpyHostToDevice));
@@ -272,7 +277,12 @@ static bool test_dgemm_tb(int M, int N, int K) {
     timer_elapsed_time(&dgemm_tb_timer);
 
     status = is_matching(d, d_ref, M * N);
-
+    if (debug){
+        printf("Referece Matrix:\n");
+        print_mat(d_ref, M, N);
+        printf("Calculated Matrix:\n");
+        print_mat(d, M, N);
+    }
 // Cleanup
 #ifdef CUDA
     checkCudaErrors(cudaFree(dev_a));
@@ -329,15 +339,18 @@ int main(int argc, char **argv) {
     // } else {
     //     printf("FAILED\n");
     // }
+    // printf("DGEMM REF time: %.6lf\n", timer_elapsed_time(&dgemm_ref_timer));
+    // printf("DGEMM time: %.6lf\n", timer_elapsed_time(&dgemm_timer));
 
-    printf("Testing DGEMM_TA... ");
-    status = test_dgemm_ta(M, N, K);
-    if (status) {
-        printf("PASS\n");
-    } else {
-        printf("FAILED\n");
-    }
-    return 0;
+    // printf("Testing DGEMM_TA... ");
+    // status = test_dgemm_ta(M, N, K);
+    // if (status) {
+    //     printf("PASS\n");
+    // } else {
+    //     printf("FAILED\n");
+    // }
+    // printf("DGEMM_TA REF time: %.6lf\n", timer_elapsed_time(&dgemm_ref_ta_timer));
+    // printf("DGEMM_TA time: %.6lf\n", timer_elapsed_time(&dgemm_ta_timer));
 
     printf("Testing DGEMM_TB... ");
     status = test_dgemm_tb(M, N, K);
@@ -346,11 +359,6 @@ int main(int argc, char **argv) {
     } else {
         printf("FAILED\n");
     }
-
-    printf("DGEMM REF time: %.6lf\n", timer_elapsed_time(&dgemm_ref_timer));
-    printf("DGEMM time: %.6lf\n", timer_elapsed_time(&dgemm_timer));
-    printf("DGEMM_TA REF time: %.6lf\n", timer_elapsed_time(&dgemm_ref_ta_timer));
-    printf("DGEMM_TA time: %.6lf\n", timer_elapsed_time(&dgemm_ta_timer));
     printf("DGEMM_TB REF time: %.6lf\n", timer_elapsed_time(&dgemm_ref_tb_timer));
     printf("DGEMM_TB time: %.6lf\n", timer_elapsed_time(&dgemm_tb_timer));
 
