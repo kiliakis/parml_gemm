@@ -321,8 +321,9 @@ int main(int argc, char **argv) {
     timer_clear(&dgemm_ref_ta_timer);
     timer_clear(&dgemm_ref_tb_timer);
 
+    bool status;
     // printf("Testing DGEMM... ");
-    // bool status = test_dgemm(M, N, K);
+    // status = test_dgemm(M, N, K);
     // if (status) {
     //     printf("PASS\n");
     // } else {
