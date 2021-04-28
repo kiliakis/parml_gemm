@@ -206,9 +206,6 @@ void dgemm_gpu(const double *A, const double *B, double *C, const int M, const i
     checkCudaErrors(cudaPeekAtLastError());
     checkCudaErrors(cudaDeviceSynchronize());
 #elif defined(_GPU_GEMM_OPT)
-    /*
-     *  FILLME: Set up the blocks, grid and the shared memory size.
-     */
     dim3 block(BLOCK_SIZE, BLOCK_SIZE);
     dim3 grid((N + block.x - 1) / block.x,
               (M + block.y - 1) / block.y);
@@ -258,13 +255,12 @@ void dgemm_ta_gpu(const double *A, const double *B, double *C, const int M, cons
     checkCudaErrors(cudaPeekAtLastError());
     checkCudaErrors(cudaDeviceSynchronize());
 #elif defined(_GPU_GEMM_OPT)
-    /*
-     *  FILLME: Set up the blocks, grid and the shared memory size.
-     */
-    dim3 block(1, 1);
-    dim3 grid(1, 1);
-    size_t shmem_size = 0;
-    dgemm_ta_optimized <<< grid, block, shmem_size>>>(A, B, C, M, N, K);
+    dim3 block(BLOCK_SIZE, BLOCK_SIZE);
+    dim3 grid((N + block.x - 1) / block.x,
+              (M + block.y - 1) / block.y);
+    size_t shmem_size = 2 * BLOCK_SIZE * BLOCK_SIZE * sizeof(double);
+    dgemm_ta_optimized<BLOCK_SIZE> <<< grid, block, shmem_size>>>(A, B, C, M, N, K);
+
     checkCudaErrors(cudaPeekAtLastError());
     checkCudaErrors(cudaDeviceSynchronize());
 #endif
