@@ -93,7 +93,7 @@ template <int BLOCK_SIZE> __global__ void dgemm_optimized(
     // store the sub-matrix of A
     __shared__ double shmem[2 * BLOCK_SIZE * BLOCK_SIZE];
     double *As = shmem;
-    double *Bs = shmem[BLOCK_SIZE*BLOCK_SIZE]; 
+    double *Bs = &(shmem[BLOCK_SIZE*BLOCK_SIZE]); 
     // __shared__ double As[BLOCK_SIZE][BLOCK_SIZE];
 
     // Declaration of the shared memory array Bs used to
@@ -130,7 +130,7 @@ template <int BLOCK_SIZE> __global__ void dgemm_optimized(
         // Multiply the two matrices together;
         // each thread computes one element
         // of the block sub-matrix
-        #pragma unroll
+        // #pragma unroll
         for (int n = 0; n < BLOCK_SIZE; ++n) {
             Csub += As[threadIdx.y*BLOCK_SIZE + n] * Bs[n*BLOCK_SIZE+threadIdx.x];
             // Csub += As[threadIdx.y][k] * Bs[k][threadIdx.x];

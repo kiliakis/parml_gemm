@@ -12,6 +12,7 @@ cublasHandle_t cublas_handle;
 #endif
 
 int validate = 1;
+int debug = 0;
 xtimer_t dgemm_ref_timer, dgemm_ref_tb_timer, dgemm_ref_ta_timer;
 xtimer_t dgemm_timer, dgemm_tb_timer, dgemm_ta_timer;
 
@@ -66,6 +67,14 @@ static void rand_init(double *data, const int N) {
     }
 }
 
+
+static void inc_init(double *data, const int N) {
+    for (int i = 0; i < N; i++) {
+        data[i] = i;
+    }
+}
+
+
 static bool is_matching(const double *a, const double *b, const int N) {
     if (validate){
         for (int i = 0; i < N; i++) {
@@ -102,8 +111,13 @@ static bool test_dgemm(int M, int N, int K) {
     checkCudaErrors(cudaMalloc((void **)&dev_c, M * N * sizeof(double)));
 #endif
 
-    rand_init(a, M * K);
-    rand_init(b, K * N);
+    if(debug){
+        inc_init(a, M * K);
+        inc_init(b, K * N);
+    }else{
+        rand_init(a, M * K);
+        rand_init(b, K * N);
+    }
 #ifdef CUDA
     checkCudaErrors(cudaMemcpy(dev_a, a, M * K * sizeof(double), cudaMemcpyHostToDevice));
     checkCudaErrors(cudaMemcpy(dev_b, b, K * N * sizeof(double), cudaMemcpyHostToDevice));
@@ -129,7 +143,12 @@ static bool test_dgemm(int M, int N, int K) {
     timer_elapsed_time(&dgemm_timer);
 
     status = is_matching(c, c_ref, M * N);
-
+    if (debug){
+        printf("Referece Matrix:\n");
+        print_mat(c_ref, M, N);
+        printf("Calculated Matrix:\n");
+        print_mat(c, M, N);
+    }
     // Cleanup
 #ifdef CUDA
     checkCudaErrors(cudaFree(dev_a));
@@ -268,6 +287,7 @@ int main(int argc, char **argv) {
     int N = 1<<10;
     int K = 1<<11;
     validate = 1;
+    debug = 0;
     if(argc > 1){
         M = atoi(argv[1]);        
     }
@@ -280,7 +300,10 @@ int main(int argc, char **argv) {
     if(argc > 4){
         validate = atoi(argv[4]);        
     }
-    printf("M:%d, N:%d, K:%d, validate:%d\n", M, N, K, validate);
+    if(argc > 5){
+        debug = atoi(argv[5]);
+    }
+    printf("M:%d, N:%d, K:%d, validate:%d, debug: %d\n", M, N, K, validate, debug);
 
     timer_clear(&dgemm_timer);
     timer_clear(&dgemm_ta_timer);
