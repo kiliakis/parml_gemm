@@ -2,7 +2,7 @@
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
-const int TILE_SIZE = 512;
+const int TILE_SIZE = 256;
 
 
 // Computes C = A*B, where A is a M by K matrix, B is a K by N matrix, C is a M by N matrix.
