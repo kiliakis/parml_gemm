@@ -18,7 +18,7 @@ void dgemm(const double *A, const double *B, double *C, const int M, const int N
                 M, N, K, alpha, A, K, B, N, beta, C, N);
     // A: K elements per row, M rows
 #else
-    const int TILE_SIZE = 256;
+    const int TILE_SIZE = 128;
     int i, j, k, ii, jj, kk;
     double sum;
     // #pragma omp parallel for private(i,j,k,sum) collapse(2)
@@ -67,7 +67,7 @@ void dgemm_ta(const double *A, const double *B, double *C, const int M, const in
                 M, N, K, alpha, A, M, B, N, beta, C, N);
     // A: K elements per row, M rows
 #else
-    const int TILE_SIZE = 512;
+    const int TILE_SIZE = 128;
 
     int i, j, k, ii, jj, kk;
     double sum;
@@ -127,7 +127,7 @@ void dgemm_tb(const double *A, const double *B, const double *C, double *D, cons
 #else
     int i, j, k, ii, jj, kk;
     double sum;
-    const int TILE_SIZE = 512;
+    const int TILE_SIZE = 128;
 
     /*
      * FILLME: Parallelize the code.
