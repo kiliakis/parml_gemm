@@ -19,7 +19,7 @@ void dgemm(const double *A, const double *B, double *C, const int M, const int N
                 M, N, K, alpha, A, K, B, N, beta, C, N);
     // A: K elements per row, M rows
 #else
-    int i, j, k;
+    int i, j, k, ii, jj, kk;
     double sum;
     // #pragma omp parallel for private(i,j,k,sum) collapse(2)
     // for (i = 0; i < M; i++) {
@@ -30,19 +30,20 @@ void dgemm(const double *A, const double *B, double *C, const int M, const int N
     //         C[i * N + j] = sum;
     //     }
     // }
-    #pragma omp parallel for collapse(2)
-    for (int ii = 0; ii < M; ii += TILE_SIZE) {
-        for (int jj = 0; jj < N; jj += TILE_SIZE) {
-            for (int kk = 0; kk < K; kk += TILE_SIZE) {
-                for (int i = ii; i < MIN(ii + TILE_SIZE, M); ++i) {
-                    for (int j = jj; j < MIN(jj + TILE_SIZE, N); ++j) {
+    // memset();
+    #pragma omp parallel for collapse(2) private(i,j,k,ii,jj,kk,sum)
+    for (ii = 0; ii < M; ii += TILE_SIZE) {
+        for (jj = 0; jj < N; jj += TILE_SIZE) {
+            for (kk = 0; kk < K; kk += TILE_SIZE) {
+                for (i = ii; i < MIN(ii + TILE_SIZE, M); ++i) {
+                    for (j = jj; j < MIN(jj + TILE_SIZE, N); ++j) {
                         // cij = C[j * M + i];
-                        double sum = 0.;
+                        sum = 0.;
                         #pragma omp unroll 16
-                        for (int k = kk; k < MIN(kk+TILE_SIZE, K); ++k) {
+                        for (k = kk; k < MIN(kk + TILE_SIZE, K); ++k) {
                             sum += A[i * K + k] * B[k * N + j];
                         }
-                        C[i * N + j] = sum;
+                        C[i * N + j] += sum;
                     }
                 }
             }
