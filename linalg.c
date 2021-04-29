@@ -143,15 +143,20 @@ void dgemm_tb(const double *A, const double *B, const double *C, double *D, cons
             for (kk = 0; kk < K; kk += TILE_SIZE) {
                 for (i = ii; i < MIN(ii + TILE_SIZE, M); ++i) {
                     for (j = jj; j < MIN(jj + TILE_SIZE, N); ++j) {
-                        // cij = C[j * M + i];
                         sum = 0.;
                         #pragma omp unroll 16
                         for (k = kk; k < MIN(kk + TILE_SIZE, K); ++k) {
                             sum += A[i * K + k] * B[j * K + k];
                         }
-                        D[i * N + j] += sum + C[i * N + j];
+                        D[i * N + j] += sum;
                     }
                 }
+                for (i = ii; i < MIN(ii + TILE_SIZE, M); ++i) {
+                    for (j = jj; j < MIN(jj + TILE_SIZE, N); ++j) {
+                        D[i * N + j] += C[i * N + j];
+                    }
+                }
+
             }
         }
     }
