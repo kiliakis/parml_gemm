@@ -140,6 +140,11 @@ void dgemm_tb(const double *A, const double *B, const double *C, double *D, cons
     #pragma omp parallel for collapse(2) private(i,j,k,ii,jj,kk,sum)
     for (ii = 0; ii < M; ii += TILE_SIZE) {
         for (jj = 0; jj < N; jj += TILE_SIZE) {
+            for (i = ii; i < MIN(ii + TILE_SIZE, M); ++i) {
+                for (j = jj; j < MIN(jj + TILE_SIZE, N); ++j) {
+                    D[i * N + j] = C[i * N + j];
+                }
+            }
             for (kk = 0; kk < K; kk += TILE_SIZE) {
                 for (i = ii; i < MIN(ii + TILE_SIZE, M); ++i) {
                     for (j = jj; j < MIN(jj + TILE_SIZE, N); ++j) {
@@ -151,12 +156,6 @@ void dgemm_tb(const double *A, const double *B, const double *C, double *D, cons
                         D[i * N + j] += sum;
                     }
                 }
-                for (i = ii; i < MIN(ii + TILE_SIZE, M); ++i) {
-                    for (j = jj; j < MIN(jj + TILE_SIZE, N); ++j) {
-                        D[i * N + j] += C[i * N + j];
-                    }
-                }
-
             }
         }
     }
